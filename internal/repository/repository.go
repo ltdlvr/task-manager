@@ -12,7 +12,7 @@ type UserRepository struct { //NOTE - можно добавить интерфе
 }
 
 // TODO - добавить валидацию
-func (r *UserRepository) CreateUser(ctx context.Context, user models.User) (int, error) { //NOTE -  можно сделать методом ваще
+func (r *UserRepository) CreateUser(ctx context.Context, user models.User) (int, error) {
 	var id int
 	row := r.Pool.QueryRow(ctx, "INSERT INTO users (name, password) VALUES ($1, $2) RETURNING id", user.Name, user.Password)
 	err := row.Scan(&id)
