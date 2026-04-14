@@ -21,3 +21,13 @@ func (r *UserRepository) CreateUser(ctx context.Context, user models.User) (int,
 	}
 	return id, nil
 }
+
+func (r *UserRepository) DeleteUser(ctx context.Context, user models.User) (int, error) {
+	var id int
+	row := r.Pool.QueryRow(ctx, "DELETE FROM users WHERE name = $1 RETURNING id", user.Name)
+	err := row.Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}

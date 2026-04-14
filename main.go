@@ -30,5 +30,6 @@ func main() {
 
 	app.Get("/ping", handlers.HealthCheck)
 	app.Post("/register", userHandler.Register)
+	app.Delete("/delete_account", userHandler.DeleteUser)
 	app.Listen(":3000")
 }

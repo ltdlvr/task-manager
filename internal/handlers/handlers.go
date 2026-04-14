@@ -35,3 +35,22 @@ func (h *UserHandler) Register(c fiber.Ctx) error {
 		"id": id,
 	})
 }
+
+func (h *UserHandler) DeleteUser(c fiber.Ctx) error {
+	var user models.User
+	err := c.Bind().Body(&user)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "failed to delete user",
+		})
+	}
+	id, err := h.Repo.DeleteUser(c.Context(), user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to delete user",
+		})
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"id": id,
+	})
+}
