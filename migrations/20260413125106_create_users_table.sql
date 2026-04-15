@@ -5,7 +5,5 @@ CREATE TABLE users(
     password VARCHAR(250) NOT NULL
 );
 
-
-
 -- +goose Down
 DROP TABLE users;
