@@ -9,6 +9,7 @@ import (
 	"github.com/ltdlvr/task-manager/internal/handler/rest"
 	"github.com/ltdlvr/task-manager/internal/infra/db/pg"
 	"github.com/ltdlvr/task-manager/internal/infra/repo"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {

@@ -6,6 +6,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.1.0
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/pressly/goose/v3 v3.27.0
+	github.com/sirupsen/logrus v1.9.4
 )
 
 require (
