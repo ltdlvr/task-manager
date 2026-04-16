@@ -25,10 +25,10 @@ func main() {
 	// InitDeps
 
 	// Repositories
-	users := repo.NewUsers()
+	usersRepo := repo.NewUsers()
 
 	// Handlers
-	authHandler := rest.NewAuth(users, dbClient)
+	authHandler := rest.NewAuth()
 	hcHandler := rest.NewHealthcheck()
 
 	// Init server
