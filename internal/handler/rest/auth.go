@@ -1,41 +1,53 @@
 package rest
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/ltdlvr/task-manager/internal/core/adapter/db"
-	"github.com/ltdlvr/task-manager/internal/core/adapter/repo"
 	"github.com/ltdlvr/task-manager/internal/core/model"
+	"github.com/ltdlvr/task-manager/internal/core/service"
 )
 
-type Auth struct {
-	users    repo.Users
-	dbClient db.Client
+type registerReq struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
 }
 
-func NewAuth(users repo.Users, dbClient db.Client) *Auth {
+type registerRes struct {
+	ID        uint64    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type Auth struct {
+	authService *service.Auth
+}
+
+func NewAuth(s *service.Auth) *Auth {
 	return &Auth{
-		users:    users,
-		dbClient: dbClient,
+		authService: s,
 	}
 }
 
 func (h *Auth) Register(c fiber.Ctx) error {
-	var user model.User
-	err := c.Bind().Body(&user)
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid body",
-		})
+	var body registerReq
+	if err := c.Bind().Body(&body); err != nil {
+		return err
 	}
 
-	if err := h.users.Save(c.Context(), h.dbClient, &user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to create user",
-		})
+	u := model.User{
+		Name:     body.Name,
+		Password: body.Password,
+	}
+	if err := h.authService.Register(c.Context(), &u); err != nil {
+		return fmt.Errorf("register user: %w", err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"id": user.ID,
+	return c.Status(201).JSON(registerRes{
+		ID:        u.ID,
+		Name:      u.Name,
+		CreatedAt: u.CreatedAt,
 	})
 }
