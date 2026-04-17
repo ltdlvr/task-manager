@@ -6,4 +6,4 @@ run-rest:
 	$(GOC) run ./cmd/rest/main.go
 
 db-migrate:
-	$(GOC) run ./cmd/db-migrate/main.go
+	MIGRATIONS_DIR=./migrations $(GOC) run ./cmd/db-migrate/main.go

@@ -1,9 +1,11 @@
 package rest
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/ltdlvr/task-manager/internal/core/model"
 	"github.com/ltdlvr/task-manager/internal/core/service"
 )
@@ -31,22 +33,19 @@ func NewAuth(s *service.Auth) *Auth {
 
 func (h *Auth) Register(c fiber.Ctx) error {
 	var body registerReq
-
 	if err := c.Bind().Body(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid body",
-		})
+		return err
 	}
+
 	u := model.User{
 		Name:     body.Name,
 		Password: body.Password,
 	}
 	if err := h.authService.Register(c.Context(), &u); err != nil {
-		return c.Status(502).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return fmt.Errorf("register user: %w", err)
 	}
-	return c.Status(201).JSON(&registerRes{
+
+	return c.Status(201).JSON(registerRes{
 		ID:        u.ID,
 		Name:      u.Name,
 		CreatedAt: u.CreatedAt,

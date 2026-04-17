@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/ltdlvr/task-manager/internal/infra/db/pg"
 	"github.com/ltdlvr/task-manager/internal/infra/repo"
 	"github.com/ltdlvr/task-manager/internal/tool"
-	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -24,9 +24,8 @@ func main() {
 		log.Fatalf("Failed to create database client: %v", err)
 	}
 
-	// InitDeps
-
-	//Misc
+	// Init deps
+	// Misc
 	pswdTool := tool.NewPassword()
 
 	// Repositories
@@ -39,8 +38,13 @@ func main() {
 	authHandler := rest.NewAuth(authService)
 	hcHandler := rest.NewHealthcheck()
 
-	// Init server
-	app := fiber.New()
+	// Init app
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(c fiber.Ctx, err error) error {
+			return tool.MapHttpError(c, err)
+		},
+	})
+
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
