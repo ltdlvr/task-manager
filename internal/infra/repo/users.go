@@ -36,3 +36,24 @@ func (r *Users) DeleteByID(ctx context.Context, client db.Client, id uint64) err
 	_, err := client.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	return db.MapError(err)
 }
+
+func (r *Users) GetByName(ctx context.Context, client db.Client, name string) (*model.User, error) {
+	row := client.QueryRowContext(
+		ctx, "SELECT id, password, created_at  FROM users WHERE name = $1", name,
+	)
+	var id uint64
+	var pass string
+	var createdAt time.Time
+	if err := row.Scan(&id, &pass, &createdAt); err != nil {
+		return nil, db.MapError(err)
+	}
+
+	u := &model.User{
+		ID:        id,
+		Name:      name,
+		Password:  pass,
+		CreatedAt: createdAt,
+	}
+
+	return u, nil
+}
