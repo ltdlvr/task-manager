@@ -51,3 +51,24 @@ func (h *Auth) Register(c fiber.Ctx) error {
 		CreatedAt: u.CreatedAt,
 	})
 }
+
+func (h *Auth) LogIn(c fiber.Ctx) error {
+	var body registerReq
+	if err := c.Bind().Body(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "invalid body",
+		})
+	}
+	u := model.User{
+		Name:     body.Name,
+		Password: body.Password,
+	}
+	if err := h.authService.LogIn(c.Context(), &u); err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"error": "invalid credentials",
+		})
+	}
+	return c.Status(200).JSON(fiber.Map{
+		"message": "login successful",
+	})
+}

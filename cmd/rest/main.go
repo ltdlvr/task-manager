@@ -51,6 +51,7 @@ func main() {
 	// Assign handlers
 	v1.Get("/healthcheck", hcHandler.Check)
 	v1.Post("/register", authHandler.Register)
+	v1.Post("/login", authHandler.LogIn)
 
 	app.Listen(fmt.Sprintf("%s:%s", conf.ServerHost(), conf.ServerPort()))
 }

@@ -36,3 +36,15 @@ func (s *Auth) Register(ctx context.Context, u *model.User) error {
 	u.Password = ""
 	return nil
 }
+
+// or maybe just name? Idk why but it sounds like a bad idea
+func (s *Auth) LogIn(ctx context.Context, u *model.User) error {
+	dbUser, err := s.usersRepo.GetByName(ctx, s.dbClient, u.Name)
+	if err != nil {
+		return fmt.Errorf("get user data: %w", err)
+	}
+	if res := s.pswdTool.Verify(u.Password, dbUser.Password); res != true {
+		return fmt.Errorf("Invalid Password")
+	}
+	return nil
+}
