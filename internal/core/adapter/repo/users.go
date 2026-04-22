@@ -12,5 +12,5 @@ type Users interface {
 
 	DeleteByID(ctx context.Context, client db.Client, id uint64) error
 
-	GetByName(ctx context.Context, client db.Client, name string) (u *model.User)
+	GetByName(ctx context.Context, client db.Client, name string) (*model.User, error)
 }
