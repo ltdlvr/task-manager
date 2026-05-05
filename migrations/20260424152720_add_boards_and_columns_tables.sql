@@ -1,13 +1,4 @@
-CREATE TABLE users(
-    id serial,
-    name varchar(100) NOT NULL,
-    password varchar(512) NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT NOW(),
-
-    PRIMARY KEY (id),
-    UNIQUE (name)
-);
-
+-- +goose Up
 CREATE TABLE boards (
     id serial PRIMARY KEY,
     name varchar(100) NOT NULL,
@@ -19,5 +10,9 @@ CREATE TABLE columns (
     board_id int NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
     name varchar(100) NOT NULL,
     position int NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT NOW() 
+    created_at timestamptz NOT NULL DEFAULT NOW()
 );
+
+
+-- +goose Down
+DROP TABLE columns, boards;

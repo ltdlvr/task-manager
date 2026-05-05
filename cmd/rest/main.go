@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/logger"
 
 	"github.com/ltdlvr/task-manager/internal/config"
 	"github.com/ltdlvr/task-manager/internal/core/service"
@@ -30,13 +31,16 @@ func main() {
 
 	// Repositories
 	usersRepo := repo.NewUsers()
+	boardsRepo := repo.NewBoards()
 
 	// Services
 	authService := service.NewAuth(usersRepo, dbClient, pswdTool)
+	boardsService := service.NewBoards(boardsRepo, dbClient)
 
 	// Handlers
 	authHandler := rest.NewAuth(authService)
 	hcHandler := rest.NewHealthcheck()
+	boardsHandler := rest.NewBoards(boardsService)
 
 	// Init app
 	app := fiber.New(fiber.Config{
@@ -44,6 +48,7 @@ func main() {
 			return tool.MapHttpError(c, err)
 		},
 	})
+	app.Use(logger.New())
 
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
@@ -52,6 +57,9 @@ func main() {
 	v1.Get("/healthcheck", hcHandler.Check)
 	v1.Post("/register", authHandler.Register)
 	v1.Post("/login", authHandler.LogIn)
+	v1.Post("/boards", boardsHandler.Create)
+	v1.Get("/boards/:id", boardsHandler.GetByID)
+	v1.Delete("/boards/:id", boardsHandler.DeleteByID)
 
 	app.Listen(fmt.Sprintf("%s:%s", conf.ServerHost(), conf.ServerPort()))
 }
