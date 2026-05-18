@@ -35,7 +35,7 @@ func (r *Boards) DeleteByID(ctx context.Context, client db.Client, id uint64) er
 }
 
 func (r *Boards) GetByID(ctx context.Context, client db.Client, id uint64) (*model.Board, error) {
-	row := client.QueryRowContext(ctx, "SELECT name, created_at  FROM boards where id = $1", id)
+	row := client.QueryRowContext(ctx, "SELECT name, created_at  FROM boards WHERE id = $1", id)
 
 	var name string
 	var createdAt time.Time

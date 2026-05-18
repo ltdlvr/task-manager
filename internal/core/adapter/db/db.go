@@ -33,3 +33,5 @@ func MapError(err error) error {
 	}
 	return err
 }
+
+//TODO - rewrite using pgx

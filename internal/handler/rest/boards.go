@@ -8,9 +8,13 @@ import (
 	"github.com/ltdlvr/task-manager/internal/core/service"
 )
 
-type boardReq struct {
-	ID   uint64 `json:"id" uri:"id"`
+// TODO - разнести структуры
+type createBoardReq struct {
 	Name string `json:"name"`
+}
+
+type byIdBoardReq struct {
+	ID uint64 `uri:"id"`
 }
 
 type boardRes struct {
@@ -30,7 +34,7 @@ func NewBoards(b *service.Boards) *Boards {
 }
 
 func (h *Boards) Create(c fiber.Ctx) error {
-	var body boardReq
+	var body createBoardReq
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid body",
@@ -55,7 +59,7 @@ func (h *Boards) Create(c fiber.Ctx) error {
 }
 
 func (h *Boards) GetByID(c fiber.Ctx) error {
-	var uri boardReq
+	var uri byIdBoardReq
 
 	if err := c.Bind().URI(&uri); err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -77,7 +81,7 @@ func (h *Boards) GetByID(c fiber.Ctx) error {
 }
 
 func (h *Boards) DeleteByID(c fiber.Ctx) error {
-	var uri boardReq
+	var uri byIdBoardReq
 
 	if err := c.Bind().URI(&uri); err != nil {
 		return c.Status(400).JSON(fiber.Map{
