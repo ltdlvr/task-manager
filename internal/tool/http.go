@@ -21,15 +21,27 @@ func MapHttpError(c fiber.Ctx, err error) error {
 	}
 
 	var status int
-	var text string
+	var message string
 
 	switch {
+	case errors.Is(err, fiber.ErrBadRequest):
+		status = fiber.StatusBadRequest
+		message = "bad request"
+	case errors.Is(err, fiber.ErrUnauthorized):
+		status = fiber.StatusUnauthorized
+		message = "unauthorized"
+	case errors.Is(err, fiber.ErrForbidden):
+		status = fiber.StatusForbidden
+		message = "forbidden"
 	case errors.Is(err, db.ErrEntityNotFound):
-		status = 404
+		status = fiber.StatusNotFound
+		message = "not found"
 	case errors.Is(err, fiber.ErrUnprocessableEntity):
-		status = 400
+		status = fiber.StatusUnprocessableEntity
+		message = "unprocessable entity"
+
 	default:
-		status = 500
+		status = fiber.StatusInternalServerError
 		log.Printf(
 			"ERROR: %s - %s %s %s, status: %d, %s\n",
 			c.IP(),
@@ -41,10 +53,10 @@ func MapHttpError(c fiber.Ctx, err error) error {
 		)
 	}
 
-	if text == "" {
-		return c.Status(status).End()
+	if message == "" {
+		return c.SendStatus(status)
 	}
 	return c.Status(status).JSON(httpError{
-		Error: err.Error(),
+		Error: message,
 	})
 }
