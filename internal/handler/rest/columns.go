@@ -48,9 +48,7 @@ func NewColumns(c *service.Columns) *Columns {
 func (h *Columns) Create(c fiber.Ctx) error {
 	var req createColumnReq
 	if err := c.Bind().All(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid request",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	col := model.Column{
@@ -60,9 +58,7 @@ func (h *Columns) Create(c fiber.Ctx) error {
 	}
 
 	if err := h.columnService.Create(c.Context(), &col); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "internal server error",
-		})
+		return err
 	}
 	return c.Status(fiber.StatusCreated).JSON(ColumnRes{
 		ID:        col.ID,
@@ -76,9 +72,7 @@ func (h *Columns) Create(c fiber.Ctx) error {
 func (h *Columns) GetAllByBoard(c fiber.Ctx) error {
 	var uri getColumnsByBoardReq
 	if err := c.Bind().URI(&uri); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid board id",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	boardID := uri.BoardID
@@ -105,15 +99,11 @@ func (h *Columns) GetAllByBoard(c fiber.Ctx) error {
 func (h *Columns) DeleteByID(c fiber.Ctx) error {
 	var uri deleteColumnReq
 	if err := c.Bind().URI(&uri); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid column id",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	if err := h.columnService.DeleteByID(c.Context(), uri.ID); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "internal server error",
-		})
+		return err
 	}
 
 	return c.SendStatus(204)
@@ -122,15 +112,11 @@ func (h *Columns) DeleteByID(c fiber.Ctx) error {
 func (h *Columns) MoveColumn(c fiber.Ctx) error {
 	var req moveColumnReq
 	if err := c.Bind().All(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid request",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	if err := h.columnService.MoveColumn(c.Context(), req.ID, req.TargetPos); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "internal server error",
-		})
+		return err
 	}
 
 	return c.SendStatus(204)

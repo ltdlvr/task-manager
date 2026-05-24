@@ -8,7 +8,6 @@ import (
 	"github.com/ltdlvr/task-manager/internal/core/service"
 )
 
-// TODO - разнести структуры
 type createBoardReq struct {
 	Name string `json:"name"`
 }
@@ -36,9 +35,7 @@ func NewBoards(b *service.Boards) *Boards {
 func (h *Boards) Create(c fiber.Ctx) error {
 	var body createBoardReq
 	if err := c.Bind().Body(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid body",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	b := model.Board{
@@ -46,9 +43,7 @@ func (h *Boards) Create(c fiber.Ctx) error {
 	}
 
 	if err := h.boardsService.Create(c.Context(), &b); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "internal server error",
-		})
+		return err
 	}
 
 	return c.Status(201).JSON(boardRes{
@@ -62,16 +57,12 @@ func (h *Boards) GetByID(c fiber.Ctx) error {
 	var uri byIdBoardReq
 
 	if err := c.Bind().URI(&uri); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid id",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	board, err := h.boardsService.GetByID(c.Context(), uri.ID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "internal server error",
-		})
+		return err
 	}
 	return c.Status(200).JSON(boardRes{
 		ID:        board.ID,
@@ -84,15 +75,11 @@ func (h *Boards) DeleteByID(c fiber.Ctx) error {
 	var uri byIdBoardReq
 
 	if err := c.Bind().URI(&uri); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid id",
-		})
+		return fiber.ErrBadRequest
 	}
 
 	if err := h.boardsService.DeleteById(c.Context(), uri.ID); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "internal server error",
-		})
+		return err
 	}
 	return c.SendStatus(204)
 }
