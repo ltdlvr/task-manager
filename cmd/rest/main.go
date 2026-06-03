@@ -9,10 +9,10 @@ import (
 
 	"github.com/ltdlvr/task-manager/internal/config"
 	"github.com/ltdlvr/task-manager/internal/core/service"
-	"github.com/ltdlvr/task-manager/internal/handler/rest"
 	"github.com/ltdlvr/task-manager/internal/infra/db/pg"
 	"github.com/ltdlvr/task-manager/internal/infra/repo"
 	"github.com/ltdlvr/task-manager/internal/tool"
+	"github.com/ltdlvr/task-manager/internal/transport/rest"
 )
 
 func main() {
@@ -28,6 +28,7 @@ func main() {
 	// Init deps
 	// Misc
 	pswdTool := tool.NewPassword()
+	tokenTool := tool.NewToken(conf.JWTSecret())
 
 	// Repositories
 	usersRepo := repo.NewUsers()
@@ -35,7 +36,7 @@ func main() {
 	columnsRepo := repo.NewColumns()
 
 	// Services
-	authService := service.NewAuth(usersRepo, dbClient, pswdTool)
+	authService := service.NewAuth(usersRepo, dbClient, pswdTool, tokenTool)
 	boardsService := service.NewBoards(boardsRepo, dbClient)
 	columnsService := service.NewColumns(columnsRepo, boardsRepo, dbClient)
 
@@ -44,6 +45,7 @@ func main() {
 	hcHandler := rest.NewHealthcheck()
 	boardsHandler := rest.NewBoards(boardsService)
 	columnsHandler := rest.NewColumns(columnsService)
+	authMiddleware := rest.AuthMiddleware(tokenTool)
 
 	// Init app
 	app := fiber.New(fiber.Config{
@@ -64,16 +66,19 @@ func main() {
 	v1.Post("/register", authHandler.Register)
 	v1.Post("/login", authHandler.LogIn)
 
+	// Jwt middleware
+	private := v1.Group("", authMiddleware)
+
 	// Boards
-	v1.Post("/boards", boardsHandler.Create)
-	v1.Get("/boards/:id", boardsHandler.GetByID)
-	v1.Delete("/boards/:id", boardsHandler.DeleteByID)
+	private.Post("/boards", boardsHandler.Create)
+	private.Get("/boards/:id", boardsHandler.GetByID)
+	private.Delete("/boards/:id", boardsHandler.DeleteByID)
 
 	// Columns
-	v1.Post("/boards/:boardId/columns", columnsHandler.Create)
-	v1.Get("/boards/:boardId/columns", columnsHandler.GetAllByBoard) // NOTE - можно объединить get в колонках и бордах, когда фронт появится (чтобы не вызывать 2 раздельных запроса)
-	v1.Delete("/columns/:id", columnsHandler.DeleteByID)
-	v1.Patch("/columns/:id/move", columnsHandler.MoveColumn)
+	private.Post("/boards/:boardId/columns", columnsHandler.Create)
+	private.Get("/boards/:boardId/columns", columnsHandler.GetAllByBoard) // NOTE - можно объединить get в колонках и бордах, когда (если) фронт появится (чтобы не вызывать 2 раздельных запроса)
+	private.Delete("/columns/:id", columnsHandler.DeleteByID)
+	private.Patch("/columns/:id/move", columnsHandler.MoveColumn)
 
 	app.Listen(fmt.Sprintf("%s:%s", conf.ServerHost(), conf.ServerPort()))
 }

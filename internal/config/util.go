@@ -21,11 +21,11 @@ func isValidPort(port string) bool {
 }
 
 func getDatabaseURL() string {
-	user := os.Getenv("DB_USER")
+	user := url.PathEscape(os.Getenv("DB_USER"))
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
 	name := os.Getenv("DB_NAME")
-	pswd := url.QueryEscape(os.Getenv("DB_PASSWORD"))
+	pswd := url.PathEscape(os.Getenv("DB_PASSWORD"))
 	sslMode := os.Getenv("DB_SSL_MODE")
 
 	if user == "" {

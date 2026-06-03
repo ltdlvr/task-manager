@@ -5,9 +5,10 @@ import (
 )
 
 type Rest struct {
-	srvHost string
-	srvPort string
-	dbURL   string
+	srvHost   string
+	srvPort   string
+	dbURL     string
+	jwtSecret string
 }
 
 func NewRest() *Rest {
@@ -27,6 +28,12 @@ func NewRest() *Rest {
 	}
 	conf.srvPort = port
 
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		fatal("JWT secret", "JWT_SECRET", secret)
+	}
+	conf.jwtSecret = secret
+
 	return conf
 }
 
@@ -40,4 +47,8 @@ func (c *Rest) ServerPort() string {
 
 func (c *Rest) DatabaseURL() string {
 	return c.dbURL
+}
+
+func (c *Rest) JWTSecret() string {
+	return c.jwtSecret
 }

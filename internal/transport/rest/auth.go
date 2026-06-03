@@ -60,10 +60,11 @@ func (h *Auth) LogIn(c fiber.Ctx) error {
 		Name:     body.Name,
 		Password: body.Password,
 	}
-	if err := h.authService.LogIn(c.Context(), &u); err != nil {
+	token, err := h.authService.LogIn(c.Context(), &u)
+	if err != nil {
 		return fiber.ErrUnauthorized
 	}
 	return c.Status(200).JSON(fiber.Map{
-		"message": "login successful",
+		"token": token,
 	})
 }
