@@ -14,7 +14,7 @@ func NewUsers() *Users {
 	return &Users{}
 }
 
-func (r *Users) Save(ctx context.Context, client db.Client, u *model.User) error {
+func (r *Users) Save(ctx context.Context, client db.DB, u *model.User) error {
 	row := client.QueryRowContext(
 		ctx,
 		"INSERT INTO users (name, password) VALUES ($1, $2) RETURNING id, created_at",
@@ -32,12 +32,12 @@ func (r *Users) Save(ctx context.Context, client db.Client, u *model.User) error
 	return nil
 }
 
-func (r *Users) DeleteByID(ctx context.Context, client db.Client, id uint64) error {
+func (r *Users) DeleteByID(ctx context.Context, client db.DB, id uint64) error {
 	_, err := client.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	return db.MapError(err)
 }
 
-func (r *Users) GetByName(ctx context.Context, client db.Client, name string) (*model.User, error) {
+func (r *Users) GetByName(ctx context.Context, client db.DB, name string) (*model.User, error) {
 	row := client.QueryRowContext(
 		ctx, "SELECT id, password, created_at  FROM users WHERE name = $1", name,
 	)

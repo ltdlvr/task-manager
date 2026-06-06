@@ -42,7 +42,12 @@ func (h *Boards) Create(c fiber.Ctx) error {
 		Name: body.Name,
 	}
 
-	if err := h.boardsService.Create(c.Context(), &b); err != nil {
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.boardsService.Create(c.Context(), userID, &b); err != nil {
 		return err
 	}
 
@@ -60,7 +65,12 @@ func (h *Boards) GetByID(c fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	board, err := h.boardsService.GetByID(c.Context(), uri.ID)
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	board, err := h.boardsService.GetByID(c.Context(), userID, uri.ID)
 	if err != nil {
 		return err
 	}
@@ -78,7 +88,12 @@ func (h *Boards) DeleteByID(c fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := h.boardsService.DeleteById(c.Context(), uri.ID); err != nil {
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.boardsService.DeleteById(c.Context(), userID, uri.ID); err != nil {
 		return err
 	}
 	return c.SendStatus(204)

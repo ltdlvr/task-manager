@@ -34,11 +34,12 @@ func main() {
 	usersRepo := repo.NewUsers()
 	boardsRepo := repo.NewBoards()
 	columnsRepo := repo.NewColumns()
+	boardMembersRepo := repo.NewBoardMembers()
 
 	// Services
 	authService := service.NewAuth(usersRepo, dbClient, pswdTool, tokenTool)
-	boardsService := service.NewBoards(boardsRepo, dbClient)
-	columnsService := service.NewColumns(columnsRepo, boardsRepo, dbClient)
+	boardsService := service.NewBoards(boardsRepo, boardMembersRepo, dbClient)
+	columnsService := service.NewColumns(columnsRepo, boardsRepo, boardMembersRepo, dbClient)
 
 	// Handlers
 	authHandler := rest.NewAuth(authService)

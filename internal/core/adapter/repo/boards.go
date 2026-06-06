@@ -8,9 +8,9 @@ import (
 )
 
 type Boards interface {
-	Create(ctx context.Context, client db.Client, b *model.Board) error
+	Create(ctx context.Context, client db.DB, b *model.Board) error
 
-	DeleteByID(ctx context.Context, client db.Client, id uint64) error
+	DeleteByID(ctx context.Context, client db.DB, id uint64) error
 
-	GetByID(ctx context.Context, client db.Client, id uint64) (*model.Board, error)
+	GetByID(ctx context.Context, client db.DB, id uint64) (*model.Board, error)
 }

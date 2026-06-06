@@ -33,6 +33,9 @@ func MapHttpError(c fiber.Ctx, err error) error {
 	case errors.Is(err, fiber.ErrForbidden):
 		status = fiber.StatusForbidden
 		message = "forbidden"
+	case errors.Is(err, db.ErrForbidden):
+		status = fiber.StatusForbidden
+		message = "forbidden"
 	case errors.Is(err, db.ErrEntityNotFound):
 		status = fiber.StatusNotFound
 		message = "not found"

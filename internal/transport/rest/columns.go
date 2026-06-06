@@ -57,7 +57,12 @@ func (h *Columns) Create(c fiber.Ctx) error {
 		Position: req.TargetPos,
 	}
 
-	if err := h.columnService.Create(c.Context(), &col); err != nil {
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.columnService.Create(c.Context(), userID, &col); err != nil {
 		return err
 	}
 	return c.Status(fiber.StatusCreated).JSON(ColumnRes{
@@ -77,7 +82,12 @@ func (h *Columns) GetAllByBoard(c fiber.Ctx) error {
 
 	boardID := uri.BoardID
 
-	columns, err := h.columnService.GetAllByBoard(c.Context(), boardID)
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	columns, err := h.columnService.GetAllByBoard(c.Context(), boardID, userID)
 	if err != nil {
 		return err
 	}
@@ -102,7 +112,12 @@ func (h *Columns) DeleteByID(c fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := h.columnService.DeleteByID(c.Context(), uri.ID); err != nil {
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.columnService.DeleteByID(c.Context(), userID, uri.ID); err != nil {
 		return err
 	}
 
@@ -115,7 +130,12 @@ func (h *Columns) MoveColumn(c fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := h.columnService.MoveColumn(c.Context(), req.ID, req.TargetPos); err != nil {
+	userID, err := getUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.columnService.MoveColumn(c.Context(), userID, req.ID, req.TargetPos); err != nil {
 		return err
 	}
 

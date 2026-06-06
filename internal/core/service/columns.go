@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ltdlvr/task-manager/internal/core/adapter/db"
@@ -11,20 +12,26 @@ import (
 )
 
 type Columns struct {
-	columnRepo repo.Columns
-	boardsRepo repo.Boards
-	dbClient   db.Client
+	columnRepo       repo.Columns
+	boardsRepo       repo.Boards
+	boardMembersRepo repo.BoardMembers
+	dbClient         db.Client
 }
 
-func NewColumns(c repo.Columns, b repo.Boards, d db.Client) *Columns {
+func NewColumns(c repo.Columns, b repo.Boards, bm repo.BoardMembers, d db.Client) *Columns {
 	return &Columns{
-		columnRepo: c,
-		boardsRepo: b,
-		dbClient:   d,
+		columnRepo:       c,
+		boardsRepo:       b,
+		boardMembersRepo: bm,
+		dbClient:         d,
 	}
 }
 
-func (s *Columns) Create(ctx context.Context, c *model.Column) error {
+func (s *Columns) Create(ctx context.Context, userID uint64, c *model.Column) error {
+	if err := s.requireBoardMember(ctx, c.BoardID, userID); err != nil {
+		return err
+	}
+
 	targetPos := c.Position
 	newPos, err := s.calculatePosition(ctx, c.BoardID, targetPos, func() ([]*model.Column, error) {
 		columns, err := s.columnRepo.GetAllByBoard(ctx, s.dbClient, c.BoardID)
@@ -44,7 +51,11 @@ func (s *Columns) Create(ctx context.Context, c *model.Column) error {
 	return nil
 }
 
-func (s *Columns) GetAllByBoard(ctx context.Context, boardID uint64) ([]*model.Column, error) {
+func (s *Columns) GetAllByBoard(ctx context.Context, boardID, userID uint64) ([]*model.Column, error) {
+	if err := s.requireBoardMember(ctx, boardID, userID); err != nil {
+		return nil, err
+	}
+
 	//check if exists
 	if _, err := s.boardsRepo.GetByID(ctx, s.dbClient, boardID); err != nil {
 		return nil, fmt.Errorf("get board: %w", err)
@@ -57,17 +68,30 @@ func (s *Columns) GetAllByBoard(ctx context.Context, boardID uint64) ([]*model.C
 	return columns, nil
 }
 
-func (s *Columns) DeleteByID(ctx context.Context, columnID uint64) error {
+func (s *Columns) DeleteByID(ctx context.Context, userID, columnID uint64) error {
+	col, err := s.columnRepo.GetByID(ctx, s.dbClient, columnID)
+	if err != nil {
+		return fmt.Errorf("get column: %w", err)
+	}
+
+	if err := s.requireBoardMember(ctx, col.BoardID, userID); err != nil {
+		return err
+	}
+
 	if err := s.columnRepo.DeleteByID(ctx, s.dbClient, columnID); err != nil {
 		return fmt.Errorf("delete column by id: %w", err)
 	}
 	return nil
 }
 
-func (s *Columns) MoveColumn(ctx context.Context, columnID uint64, targetPos int) error {
+func (s *Columns) MoveColumn(ctx context.Context, userID, columnID uint64, targetPos int) error {
 	col, err := s.columnRepo.GetByID(ctx, s.dbClient, columnID)
 	if err != nil {
 		return fmt.Errorf("get column: %w", err)
+	}
+
+	if err := s.requireBoardMember(ctx, col.BoardID, userID); err != nil {
+		return err
 	}
 
 	newPos, err := s.calculatePosition(ctx, col.BoardID, targetPos, func() ([]*model.Column, error) {
@@ -136,6 +160,18 @@ func (s *Columns) rebalanceBoard(ctx context.Context, boardID uint64) error {
 		}
 		return nil
 	})
+}
+
+func (s *Columns) requireBoardMember(ctx context.Context, boardID, userID uint64) error {
+	_, err := s.boardMembersRepo.GetRole(ctx, s.dbClient, boardID, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrEntityNotFound) {
+			return db.ErrForbidden
+		}
+		return fmt.Errorf("get board role: %w", err)
+	}
+
+	return nil
 }
 
 func getNeighbours(columns []*model.Column, targetPos int) (prev, next *int, err error) {
