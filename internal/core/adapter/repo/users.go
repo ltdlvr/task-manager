@@ -8,9 +8,9 @@ import (
 )
 
 type Users interface {
-	Save(ctx context.Context, client db.Client, u *model.User) error
+	Save(ctx context.Context, client db.DB, u *model.User) error
 
-	DeleteByID(ctx context.Context, client db.Client, id uint64) error
+	DeleteByID(ctx context.Context, client db.DB, id uint64) error
 
-	GetByName(ctx context.Context, client db.Client, name string) (*model.User, error)
+	GetByName(ctx context.Context, client db.DB, name string) (*model.User, error)
 }

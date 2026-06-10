@@ -33,13 +33,18 @@ func MapHttpError(c fiber.Ctx, err error) error {
 	case errors.Is(err, fiber.ErrForbidden):
 		status = fiber.StatusForbidden
 		message = "forbidden"
+	case errors.Is(err, db.ErrForbidden):
+		status = fiber.StatusForbidden
+		message = "forbidden"
 	case errors.Is(err, db.ErrEntityNotFound):
 		status = fiber.StatusNotFound
 		message = "not found"
 	case errors.Is(err, fiber.ErrUnprocessableEntity):
 		status = fiber.StatusUnprocessableEntity
 		message = "unprocessable entity"
-
+	case errors.Is(err, db.ErrOutOfRange):
+		status = fiber.StatusUnprocessableEntity
+		message = "unprocessable entity"
 	default:
 		status = fiber.StatusInternalServerError
 		log.Printf(

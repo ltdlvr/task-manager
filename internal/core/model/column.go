@@ -9,3 +9,7 @@ type Column struct {
 	Position  int
 	CreatedAt time.Time
 }
+
+func (c *Column) GetPosition() int {
+	return c.Position
+}

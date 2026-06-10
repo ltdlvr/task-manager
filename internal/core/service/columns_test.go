@@ -15,15 +15,15 @@ type boardsRepoStub struct {
 	err   error
 }
 
-func (r *boardsRepoStub) Create(ctx context.Context, client db.Client, b *model.Board) error {
+func (r *boardsRepoStub) Create(ctx context.Context, client db.DB, b *model.Board) error {
 	panic("unexpected Create call")
 }
 
-func (r *boardsRepoStub) DeleteByID(ctx context.Context, client db.Client, id uint64) error {
+func (r *boardsRepoStub) DeleteByID(ctx context.Context, client db.DB, id uint64) error {
 	panic("unexpected DeleteByID call")
 }
 
-func (r *boardsRepoStub) GetByID(ctx context.Context, client db.Client, id uint64) (*model.Board, error) {
+func (r *boardsRepoStub) GetByID(ctx context.Context, client db.DB, id uint64) (*model.Board, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -61,6 +61,25 @@ func (r *columnsRepoStub) UpdatePosition(ctx context.Context, client db.DB, newP
 	panic("unexpected UpdatePosition call")
 }
 
+type boardMembersRepoStub struct {
+	role model.BoardRole
+	err  error
+}
+
+func (r *boardMembersRepoStub) Create(ctx context.Context, client db.DB, m *model.BoardMember) error {
+	panic("unexpected Create call")
+}
+
+func (r *boardMembersRepoStub) GetRole(ctx context.Context, client db.DB, boardID, userID uint64) (model.BoardRole, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.role == "" {
+		return model.BoardRoleMember, nil
+	}
+	return r.role, nil
+}
+
 func TestColumnsCreateCalculatesPositionFromTargetIndex(t *testing.T) {
 	repo := &columnsRepoStub{
 		columns: []*model.Column{
@@ -68,7 +87,8 @@ func TestColumnsCreateCalculatesPositionFromTargetIndex(t *testing.T) {
 			{ID: 2, BoardID: 10, Position: 2048},
 		},
 	}
-	svc := NewColumns(repo, nil, nil)
+	boardMembersRepo := &boardMembersRepoStub{}
+	svc := NewColumns(repo, nil, boardMembersRepo, nil)
 
 	col := &model.Column{
 		BoardID:  10,
@@ -76,7 +96,7 @@ func TestColumnsCreateCalculatesPositionFromTargetIndex(t *testing.T) {
 		Position: 1,
 	}
 
-	if err := svc.Create(context.Background(), col); err != nil {
+	if err := svc.Create(context.Background(), 42, col); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
@@ -94,9 +114,10 @@ func TestColumnsCreateRejectsOutOfRangeTargetIndex(t *testing.T) {
 			{ID: 1, BoardID: 10, Position: 1024},
 		},
 	}
-	svc := NewColumns(repo, nil, nil)
+	boardMembersRepo := &boardMembersRepoStub{}
+	svc := NewColumns(repo, nil, boardMembersRepo, nil)
 
-	err := svc.Create(context.Background(), &model.Column{
+	err := svc.Create(context.Background(), 42, &model.Column{
 		BoardID:  10,
 		Name:     "Doing",
 		Position: 2,
@@ -112,12 +133,31 @@ func TestColumnsCreateRejectsOutOfRangeTargetIndex(t *testing.T) {
 	}
 }
 
+func TestColumnsCreateRejectsNonMember(t *testing.T) {
+	repo := &columnsRepoStub{}
+	boardMembersRepo := &boardMembersRepoStub{err: db.ErrEntityNotFound}
+	svc := NewColumns(repo, nil, boardMembersRepo, nil)
+
+	err := svc.Create(context.Background(), 42, &model.Column{
+		BoardID:  10,
+		Name:     "Doing",
+		Position: 0,
+	})
+	if !errors.Is(err, db.ErrForbidden) {
+		t.Fatalf("Create() error = %v, want forbidden", err)
+	}
+	if repo.created != nil {
+		t.Fatalf("created = %v, want nil", repo.created)
+	}
+}
+
 func TestColumnsGetAllByBoardRejectsMissingBoard(t *testing.T) {
 	columnsRepo := &columnsRepoStub{}
 	boardsRepo := &boardsRepoStub{err: db.ErrEntityNotFound}
-	svc := NewColumns(columnsRepo, boardsRepo, nil)
+	boardMembersRepo := &boardMembersRepoStub{}
+	svc := NewColumns(columnsRepo, boardsRepo, boardMembersRepo, nil)
 
-	columns, err := svc.GetAllByBoard(context.Background(), 10)
+	columns, err := svc.GetAllByBoard(context.Background(), 10, 42)
 	if !errors.Is(err, db.ErrEntityNotFound) {
 		t.Fatalf("GetAllByBoard() error = %v, want entity not found", err)
 	}
