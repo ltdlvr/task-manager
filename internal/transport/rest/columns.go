@@ -11,7 +11,7 @@ import (
 type createColumnReq struct {
 	BoardID   uint64 `json:"boardId" uri:"boardId"`
 	Name      string `json:"name"`
-	TargetPos int    `json:"position"`
+	TargetPos int    `json:"targetPos"`
 }
 
 type getColumnsByBoardReq struct {

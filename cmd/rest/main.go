@@ -34,18 +34,21 @@ func main() {
 	usersRepo := repo.NewUsers()
 	boardsRepo := repo.NewBoards()
 	columnsRepo := repo.NewColumns()
+	tasksRepo := repo.NewTasks()
 	boardMembersRepo := repo.NewBoardMembers()
 
 	// Services
 	authService := service.NewAuth(usersRepo, dbClient, pswdTool, tokenTool)
 	boardsService := service.NewBoards(boardsRepo, boardMembersRepo, dbClient)
 	columnsService := service.NewColumns(columnsRepo, boardsRepo, boardMembersRepo, dbClient)
+	tasksService := service.NewTasks(tasksRepo, columnsRepo, boardMembersRepo, dbClient)
 
 	// Handlers
 	authHandler := rest.NewAuth(authService)
 	hcHandler := rest.NewHealthcheck()
 	boardsHandler := rest.NewBoards(boardsService)
 	columnsHandler := rest.NewColumns(columnsService)
+	tasksHandler := rest.NewTasks(tasksService)
 	authMiddleware := rest.AuthMiddleware(tokenTool)
 
 	// Init app
@@ -80,6 +83,12 @@ func main() {
 	private.Get("/boards/:boardId/columns", columnsHandler.GetAllByBoard) // NOTE - можно объединить get в колонках и бордах, когда (если) фронт появится (чтобы не вызывать 2 раздельных запроса)
 	private.Delete("/columns/:id", columnsHandler.DeleteByID)
 	private.Patch("/columns/:id/move", columnsHandler.MoveColumn)
+
+	// Tasks
+	private.Post("/columns/:columnId/tasks", tasksHandler.Create)
+	private.Get("/columns/:columnId/tasks", tasksHandler.GetAllByColumn)
+	private.Delete("/tasks/:id", tasksHandler.DeleteByID)
+	private.Patch("/tasks/:id/move", tasksHandler.MoveTask)
 
 	app.Listen(fmt.Sprintf("%s:%s", conf.ServerHost(), conf.ServerPort()))
 }
