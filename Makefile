@@ -1,7 +1,15 @@
 GOC=go
+ENV_FILE ?= .env.dev
 
-.PHONY: run-rest db-migrate test-api
+ifneq (,$(wildcard $(ENV_FILE)))
+include $(ENV_FILE)
+export
+endif
 
+.PHONY: run-rest db-migrate test-api db-up
+
+db-up:
+	docker-compose up -d
 run-rest:
 	$(GOC) run ./cmd/rest/main.go
 
