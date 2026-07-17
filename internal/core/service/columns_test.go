@@ -11,8 +11,9 @@ import (
 )
 
 type boardsRepoStub struct {
-	board *model.Board
-	err   error
+	board   *model.Board
+	err     error
+	clients []db.DB
 }
 
 func (r *boardsRepoStub) Create(ctx context.Context, client db.DB, b *model.Board) error {
@@ -30,27 +31,46 @@ func (r *boardsRepoStub) GetByID(ctx context.Context, client db.DB, id uint64) (
 	return r.board, nil
 }
 
+func (r *boardsRepoStub) LockByID(_ context.Context, client db.DB, _ uint64) error {
+	r.clients = append(r.clients, client)
+	return nil
+}
+
 type columnsRepoStub struct {
-	columns []*model.Column
-	created *model.Column
+	column          *model.Column
+	columns         []*model.Column
+	otherColumns    []*model.Column
+	created         *model.Column
+	updatedPosition int
+	updateCalled    bool
+	clients         []db.DB
 }
 
 func (r *columnsRepoStub) Create(ctx context.Context, client db.DB, c *model.Column) error {
+	r.clients = append(r.clients, client)
 	copy := *c
 	r.created = &copy
 	return nil
 }
 
 func (r *columnsRepoStub) GetByID(ctx context.Context, client db.DB, id uint64) (*model.Column, error) {
-	panic("unexpected GetByID call")
+	r.clients = append(r.clients, client)
+	return r.column, nil
 }
 
 func (r *columnsRepoStub) GetAllByBoard(ctx context.Context, client db.DB, boardID uint64) ([]*model.Column, error) {
+	r.clients = append(r.clients, client)
 	return r.columns, nil
 }
 
+func (r *columnsRepoStub) LockByID(_ context.Context, client db.DB, _ uint64) error {
+	r.clients = append(r.clients, client)
+	return nil
+}
+
 func (r *columnsRepoStub) GetOtherByBoard(ctx context.Context, client db.DB, boardID uint64, columnID uint64) ([]*model.Column, error) {
-	panic("unexpected GetOtherByBoard call")
+	r.clients = append(r.clients, client)
+	return r.otherColumns, nil
 }
 
 func (r *columnsRepoStub) DeleteByID(ctx context.Context, client db.DB, id uint64) error {
@@ -58,12 +78,16 @@ func (r *columnsRepoStub) DeleteByID(ctx context.Context, client db.DB, id uint6
 }
 
 func (r *columnsRepoStub) UpdatePosition(ctx context.Context, client db.DB, newPos int, id uint64) error {
-	panic("unexpected UpdatePosition call")
+	r.clients = append(r.clients, client)
+	r.updatedPosition = newPos
+	r.updateCalled = true
+	return nil
 }
 
 type boardMembersRepoStub struct {
-	role model.BoardRole
-	err  error
+	role    model.BoardRole
+	err     error
+	clients []db.DB
 }
 
 func (r *boardMembersRepoStub) Create(ctx context.Context, client db.DB, m *model.BoardMember) error {
@@ -71,6 +95,7 @@ func (r *boardMembersRepoStub) Create(ctx context.Context, client db.DB, m *mode
 }
 
 func (r *boardMembersRepoStub) GetRole(ctx context.Context, client db.DB, boardID, userID uint64) (model.BoardRole, error) {
+	r.clients = append(r.clients, client)
 	if r.err != nil {
 		return "", r.err
 	}
@@ -88,7 +113,9 @@ func TestColumnsCreateCalculatesPositionFromTargetIndex(t *testing.T) {
 		},
 	}
 	boardMembersRepo := &boardMembersRepoStub{}
-	svc := NewColumns(repo, nil, boardMembersRepo, nil)
+	boardsRepo := &boardsRepoStub{}
+	dbClient := newTransactionClientStub()
+	svc := NewColumns(repo, boardsRepo, boardMembersRepo, dbClient)
 
 	col := &model.Column{
 		BoardID:  10,
@@ -106,6 +133,9 @@ func TestColumnsCreateCalculatesPositionFromTargetIndex(t *testing.T) {
 	if repo.created == nil || repo.created.Position != 1536 {
 		t.Fatalf("created position = %v, want 1536", repo.created)
 	}
+	assertClientsUseTransaction(t, dbClient.trx, repo.clients...)
+	assertClientsUseTransaction(t, dbClient.trx, boardsRepo.clients...)
+	assertClientsUseTransaction(t, dbClient.trx, boardMembersRepo.clients...)
 }
 
 func TestColumnsCreateRejectsOutOfRangeTargetIndex(t *testing.T) {
@@ -115,7 +145,7 @@ func TestColumnsCreateRejectsOutOfRangeTargetIndex(t *testing.T) {
 		},
 	}
 	boardMembersRepo := &boardMembersRepoStub{}
-	svc := NewColumns(repo, nil, boardMembersRepo, nil)
+	svc := NewColumns(repo, &boardsRepoStub{}, boardMembersRepo, newTransactionClientStub())
 
 	err := svc.Create(context.Background(), 42, &model.Column{
 		BoardID:  10,
@@ -136,7 +166,7 @@ func TestColumnsCreateRejectsOutOfRangeTargetIndex(t *testing.T) {
 func TestColumnsCreateRejectsNonMember(t *testing.T) {
 	repo := &columnsRepoStub{}
 	boardMembersRepo := &boardMembersRepoStub{err: db.ErrEntityNotFound}
-	svc := NewColumns(repo, nil, boardMembersRepo, nil)
+	svc := NewColumns(repo, &boardsRepoStub{}, boardMembersRepo, newTransactionClientStub())
 
 	err := svc.Create(context.Background(), 42, &model.Column{
 		BoardID:  10,
@@ -149,6 +179,30 @@ func TestColumnsCreateRejectsNonMember(t *testing.T) {
 	if repo.created != nil {
 		t.Fatalf("created = %v, want nil", repo.created)
 	}
+}
+
+func TestColumnsMoveColumnUsesTransaction(t *testing.T) {
+	columnsRepo := &columnsRepoStub{
+		column: &model.Column{ID: 7, BoardID: 10, Position: 1024},
+		otherColumns: []*model.Column{
+			{ID: 8, BoardID: 10, Position: 1024},
+			{ID: 9, BoardID: 10, Position: 3072},
+		},
+	}
+	boardsRepo := &boardsRepoStub{}
+	membersRepo := &boardMembersRepoStub{}
+	dbClient := newTransactionClientStub()
+	svc := NewColumns(columnsRepo, boardsRepo, membersRepo, dbClient)
+
+	if err := svc.MoveColumn(context.Background(), 42, 7, 1); err != nil {
+		t.Fatalf("MoveColumn() error = %v", err)
+	}
+	if !columnsRepo.updateCalled || columnsRepo.updatedPosition != 2048 {
+		t.Fatalf("updated position = %d, called = %v; want 2048", columnsRepo.updatedPosition, columnsRepo.updateCalled)
+	}
+	assertClientsUseTransaction(t, dbClient.trx, columnsRepo.clients...)
+	assertClientsUseTransaction(t, dbClient.trx, boardsRepo.clients...)
+	assertClientsUseTransaction(t, dbClient.trx, membersRepo.clients...)
 }
 
 func TestColumnsGetAllByBoardRejectsMissingBoard(t *testing.T) {

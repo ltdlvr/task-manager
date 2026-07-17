@@ -83,7 +83,7 @@ func (s *Boards) requireMember(ctx context.Context, boardID, userID uint64) (mod
 	role, err := s.boardMembersRepo.GetRole(ctx, s.dbClient, boardID, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrEntityNotFound) {
-			return "", db.ErrForbidden
+			return "", db.ErrEntityNotFound
 		}
 		return "", fmt.Errorf("get role: %w", err)
 	}

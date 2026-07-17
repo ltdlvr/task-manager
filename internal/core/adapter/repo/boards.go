@@ -13,4 +13,6 @@ type Boards interface {
 	DeleteByID(ctx context.Context, client db.DB, id uint64) error
 
 	GetByID(ctx context.Context, client db.DB, id uint64) (*model.Board, error)
+
+	LockByID(ctx context.Context, client db.DB, id uint64) error
 }

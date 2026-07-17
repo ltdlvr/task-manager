@@ -27,8 +27,20 @@ func (r *Tasks) Create(ctx context.Context, client db.DB, t *model.Task) error {
 }
 
 func (r *Tasks) GetByID(ctx context.Context, client db.DB, id uint64) (*model.Task, error) {
+	return r.getByID(ctx, client, id, false)
+}
+
+func (r *Tasks) GetByIDForUpdate(ctx context.Context, client db.DB, id uint64) (*model.Task, error) {
+	return r.getByID(ctx, client, id, true)
+}
+
+func (r *Tasks) getByID(ctx context.Context, client db.DB, id uint64, forUpdate bool) (*model.Task, error) {
+	query := "SELECT column_id, title, description, position, created_at FROM tasks WHERE id = $1"
+	if forUpdate {
+		query += " FOR UPDATE"
+	}
 	row := client.QueryRowContext(
-		ctx, "SELECT column_id, title, description, position, created_at FROM tasks WHERE id = $1", id,
+		ctx, query, id,
 	)
 	c := &model.Task{
 		ID: id,
@@ -46,7 +58,7 @@ func (r *Tasks) GetAllByColumn(ctx context.Context, client db.DB, columnID uint6
 		SELECT id, title, "description", position, created_at
 		FROM tasks
 		WHERE column_id = $1
-		ORDER BY position ASC
+		ORDER BY position ASC, id ASC
 	`, columnID)
 	if err != nil {
 		return nil, db.MapError(err)
@@ -72,7 +84,7 @@ func (r *Tasks) GetOtherByColumn(ctx context.Context, client db.DB, columnID, ta
 		SELECT id, title, "description", position, created_at
 		FROM tasks
 		WHERE column_id = $1 AND id != $2
-		ORDER BY position ASC
+		ORDER BY position ASC, id ASC
 	`, columnID, taskID)
 	if err != nil {
 		return nil, db.MapError(err)
@@ -82,7 +94,7 @@ func (r *Tasks) GetOtherByColumn(ctx context.Context, client db.DB, columnID, ta
 	tasks := make([]*model.Task, 0)
 	for rows.Next() {
 		c := &model.Task{ColumnID: columnID}
-		if err := rows.Scan(&c.ID, &c.Title, &c.Position, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Position, &c.CreatedAt); err != nil {
 			return nil, db.MapError(err)
 		}
 		tasks = append(tasks, c)

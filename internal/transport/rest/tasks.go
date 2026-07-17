@@ -9,10 +9,13 @@ import (
 )
 
 type createTaskReq struct {
-	ColumnID    uint64 `json:"columnId" uri:"columnId"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	TargetPos   int    `json:"targetPos"`
+}
+
+type createTaskURI struct {
+	ColumnID uint64 `uri:"columnId"`
 }
 
 type getTasksByColumnReq struct {
@@ -24,9 +27,12 @@ type deleteTaskReq struct {
 }
 
 type moveTaskReq struct {
-	ID             uint64 `uri:"id"`
 	TargetColumnID uint64 `json:"targetColumnId"`
 	TargetPos      int    `json:"targetPos"`
+}
+
+type moveTaskURI struct {
+	ID uint64 `uri:"id"`
 }
 
 type TaskRes struct {
@@ -49,13 +55,18 @@ func NewTasks(t *service.Tasks) *Tasks {
 }
 
 func (h *Tasks) Create(c fiber.Ctx) error {
+	var uri createTaskURI
+	if err := c.Bind().URI(&uri); err != nil {
+		return fiber.ErrBadRequest
+	}
+
 	var req createTaskReq
-	if err := c.Bind().All(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
 
 	task := model.Task{
-		ColumnID:    req.ColumnID,
+		ColumnID:    uri.ColumnID,
 		Title:       req.Title,
 		Description: req.Description,
 		Position:    req.TargetPos,
@@ -128,8 +139,13 @@ func (h *Tasks) DeleteByID(c fiber.Ctx) error {
 }
 
 func (h *Tasks) MoveTask(c fiber.Ctx) error {
+	var uri moveTaskURI
+	if err := c.Bind().URI(&uri); err != nil {
+		return fiber.ErrBadRequest
+	}
+
 	var req moveTaskReq
-	if err := c.Bind().All(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
 
@@ -138,7 +154,7 @@ func (h *Tasks) MoveTask(c fiber.Ctx) error {
 		return err
 	}
 
-	if err := h.taskService.MoveTask(c.Context(), userID, req.ID, req.TargetColumnID, req.TargetPos); err != nil {
+	if err := h.taskService.MoveTask(c.Context(), userID, uri.ID, req.TargetColumnID, req.TargetPos); err != nil {
 		return err
 	}
 

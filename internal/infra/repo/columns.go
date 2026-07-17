@@ -41,12 +41,18 @@ func (r *Columns) GetByID(ctx context.Context, client db.DB, id uint64) (*model.
 	return c, nil
 }
 
+func (r *Columns) LockByID(ctx context.Context, client db.DB, id uint64) error {
+	row := client.QueryRowContext(ctx, "SELECT id FROM columns WHERE id = $1 FOR UPDATE", id)
+	var lockedID uint64
+	return db.MapError(row.Scan(&lockedID))
+}
+
 func (r *Columns) GetAllByBoard(ctx context.Context, client db.DB, boardID uint64) ([]*model.Column, error) {
 	rows, err := client.QueryContext(ctx, `
 		SELECT id, name, position, created_at
 		FROM columns
 		WHERE board_id = $1
-		ORDER BY position ASC
+		ORDER BY position ASC, id ASC
 	`, boardID)
 	if err != nil {
 		return nil, db.MapError(err)
@@ -72,7 +78,7 @@ func (r *Columns) GetOtherByBoard(ctx context.Context, client db.DB, boardID uin
 		SELECT id, name, position, created_at
 		FROM columns
 		WHERE board_id = $1 AND id != $2
-		ORDER BY position ASC
+		ORDER BY position ASC, id ASC
 	`, boardID, columnID)
 	if err != nil {
 		return nil, db.MapError(err)

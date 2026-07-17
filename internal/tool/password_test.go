@@ -3,6 +3,8 @@ package tool
 import (
 	"math/rand"
 	"testing"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestVerifyPassword(t *testing.T) {
@@ -19,5 +21,12 @@ func TestVerifyPassword(t *testing.T) {
 	}
 	if !pswdTool.Verify(password, hashed) {
 		t.Error("VerifyPassword() = false; want true")
+	}
+	cost, err := bcrypt.Cost([]byte(hashed))
+	if err != nil {
+		t.Fatalf("get password hash cost: %v", err)
+	}
+	if cost != bcryptCost {
+		t.Errorf("password hash cost = %d; want %d", cost, bcryptCost)
 	}
 }

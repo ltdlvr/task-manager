@@ -12,6 +12,8 @@ type Columns interface {
 
 	GetByID(ctx context.Context, client db.DB, id uint64) (*model.Column, error)
 
+	LockByID(ctx context.Context, client db.DB, id uint64) error
+
 	GetAllByBoard(ctx context.Context, client db.DB, boardId uint64) ([]*model.Column, error)
 
 	GetOtherByBoard(ctx context.Context, client db.DB, boardID uint64, columnID uint64) ([]*model.Column, error)

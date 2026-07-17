@@ -39,12 +39,18 @@ func MapHttpError(c fiber.Ctx, err error) error {
 	case errors.Is(err, db.ErrEntityNotFound):
 		status = fiber.StatusNotFound
 		message = "not found"
+	case errors.Is(err, fiber.ErrRequestEntityTooLarge):
+		status = fiber.StatusRequestEntityTooLarge
+		message = "request entity too large"
 	case errors.Is(err, fiber.ErrUnprocessableEntity):
 		status = fiber.StatusUnprocessableEntity
 		message = "unprocessable entity"
 	case errors.Is(err, db.ErrOutOfRange):
 		status = fiber.StatusUnprocessableEntity
 		message = "unprocessable entity"
+	case errors.Is(err, fiber.ErrTooManyRequests):
+		status = fiber.StatusTooManyRequests
+		message = "too many requests"
 	default:
 		status = fiber.StatusInternalServerError
 		log.Printf(

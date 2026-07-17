@@ -52,3 +52,9 @@ func (r *Boards) GetByID(ctx context.Context, client db.DB, id uint64) (*model.B
 
 	return b, nil
 }
+
+func (r *Boards) LockByID(ctx context.Context, client db.DB, id uint64) error {
+	row := client.QueryRowContext(ctx, "SELECT id FROM boards WHERE id = $1 FOR UPDATE", id)
+	var lockedID uint64
+	return db.MapError(row.Scan(&lockedID))
+}

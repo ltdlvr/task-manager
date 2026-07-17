@@ -11,6 +11,8 @@ import (
 	"github.com/ltdlvr/task-manager/internal/core/model"
 )
 
+const dummyHash = "$2b$12$Ym11GOBee.HgJhJ3VFuAGerqQ7u6vunrOTOKs4cKeW9I.Z26B764m"
+
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
 type Auth struct {
@@ -42,13 +44,16 @@ func (s *Auth) Register(ctx context.Context, u *model.User) error {
 	return nil
 }
 
-// or maybe just name? Idk why but it sounds like a bad idea
 func (s *Auth) LogIn(ctx context.Context, u *model.User) (string, error) {
 	dbUser, err := s.usersRepo.GetByName(ctx, s.db, u.Name)
 	if err != nil {
+		if errors.Is(err, db.ErrEntityNotFound) {
+			s.pswdTool.Verify(u.Password, dummyHash)
+			return "", ErrInvalidCredentials
+		}
 		return "", fmt.Errorf("get user data: %w", err)
 	}
-	if res := s.pswdTool.Verify(u.Password, dbUser.Password); res != true {
+	if res := s.pswdTool.Verify(u.Password, dbUser.Password); !res {
 		return "", ErrInvalidCredentials
 	}
 

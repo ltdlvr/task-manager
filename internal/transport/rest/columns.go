@@ -9,9 +9,12 @@ import (
 )
 
 type createColumnReq struct {
-	BoardID   uint64 `json:"boardId" uri:"boardId"`
 	Name      string `json:"name"`
 	TargetPos int    `json:"targetPos"`
+}
+
+type createColumnURI struct {
+	BoardID uint64 `uri:"boardId"`
 }
 
 type getColumnsByBoardReq struct {
@@ -23,8 +26,11 @@ type deleteColumnReq struct {
 }
 
 type moveColumnReq struct {
-	ID        uint64 `uri:"id"`
-	TargetPos int    `json:"targetPos"`
+	TargetPos int `json:"targetPos"`
+}
+
+type moveColumnURI struct {
+	ID uint64 `uri:"id"`
 }
 
 type ColumnRes struct {
@@ -46,13 +52,18 @@ func NewColumns(c *service.Columns) *Columns {
 }
 
 func (h *Columns) Create(c fiber.Ctx) error {
+	var uri createColumnURI
+	if err := c.Bind().URI(&uri); err != nil {
+		return fiber.ErrBadRequest
+	}
+
 	var req createColumnReq
-	if err := c.Bind().All(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
 
 	col := model.Column{
-		BoardID:  req.BoardID,
+		BoardID:  uri.BoardID,
 		Name:     req.Name,
 		Position: req.TargetPos,
 	}
@@ -125,8 +136,13 @@ func (h *Columns) DeleteByID(c fiber.Ctx) error {
 }
 
 func (h *Columns) MoveColumn(c fiber.Ctx) error {
+	var uri moveColumnURI
+	if err := c.Bind().URI(&uri); err != nil {
+		return fiber.ErrBadRequest
+	}
+
 	var req moveColumnReq
-	if err := c.Bind().All(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
 
@@ -135,7 +151,7 @@ func (h *Columns) MoveColumn(c fiber.Ctx) error {
 		return err
 	}
 
-	if err := h.columnService.MoveColumn(c.Context(), userID, req.ID, req.TargetPos); err != nil {
+	if err := h.columnService.MoveColumn(c.Context(), userID, uri.ID, req.TargetPos); err != nil {
 		return err
 	}
 

@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -62,7 +63,10 @@ func (h *Auth) LogIn(c fiber.Ctx) error {
 	}
 	token, err := h.authService.LogIn(c.Context(), &u)
 	if err != nil {
-		return fiber.ErrUnauthorized
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			return fiber.ErrUnauthorized
+		}
+		return err
 	}
 	return c.Status(200).JSON(fiber.Map{
 		"token": token,

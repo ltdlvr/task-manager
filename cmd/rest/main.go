@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 
 	"github.com/ltdlvr/task-manager/internal/config"
@@ -14,6 +16,8 @@ import (
 	"github.com/ltdlvr/task-manager/internal/tool"
 	"github.com/ltdlvr/task-manager/internal/transport/rest"
 )
+
+const requestBodyLimit = 64 * 1024
 
 func main() {
 	// Init config
@@ -53,6 +57,7 @@ func main() {
 
 	// Init app
 	app := fiber.New(fiber.Config{
+		BodyLimit: requestBodyLimit,
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			return tool.MapHttpError(c, err)
 		},
@@ -67,8 +72,15 @@ func main() {
 	v1.Get("/healthcheck", hcHandler.Check)
 
 	// Auth
-	v1.Post("/register", authHandler.Register)
-	v1.Post("/login", authHandler.LogIn)
+	authLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: time.Minute,
+		KeyGenerator: func(c fiber.Ctx) string {
+			return c.IP() + ":" + c.Path()
+		},
+	})
+	v1.Post("/register", authLimiter, authHandler.Register)
+	v1.Post("/login", authLimiter, authHandler.LogIn)
 
 	// Jwt middleware
 	private := v1.Group("", authMiddleware)
